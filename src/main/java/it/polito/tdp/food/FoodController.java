@@ -5,8 +5,12 @@
 package it.polito.tdp.food;
 
 import java.net.URL;
+import java.util.Comparator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.ResourceBundle;
 
+import it.polito.tdp.food.model.Food;
 import it.polito.tdp.food.model.Model;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -41,27 +45,75 @@ public class FoodController {
     private Button btnSimula; // Value injected by FXMLLoader
 
     @FXML // fx:id="boxFood"
-    private ComboBox<?> boxFood; // Value injected by FXMLLoader
+    private ComboBox<Food> boxFood; // Value injected by FXMLLoader
 
     @FXML // fx:id="txtResult"
     private TextArea txtResult; // Value injected by FXMLLoader
 
     @FXML
     void doCreaGrafo(ActionEvent event) {
-    	txtResult.clear();
-    	txtResult.appendText("Creazione grafo...");
+    	try { int porzioni= Integer.parseInt(txtPorzioni.getText());
+			if (porzioni==0)
+			{
+				txtResult.setText("Hai inserito 0");
+			}
+			else {
+				boxFood.getItems().clear();
+				model.creaGrafo(porzioni);
+				txtResult.setText(String.format("Grafo creato con %d vertici e %d archi", model.getNumVertici(), model.getNumArchi()));
+				List<Food> listaCibi= new LinkedList<Food>(model.getMappaCibi().values());
+				System.out.println(listaCibi.size());
+				listaCibi.sort(new Comparator<Food>() {
+
+					@Override
+					public int compare(Food o1, Food o2) {
+						// TODO Auto-generated method stub
+						return o1.getDisplay_name().compareTo(o2.getDisplay_name());
+					}
+				});
+				boxFood.getItems().addAll(listaCibi);
+				boxFood.setValue(listaCibi.get(0));
+				boxFood.setDisable(false);
+				btnCalorie.setDisable(false);
+				btnSimula.setDisable(false);
+			}
+		}
+    	catch (NumberFormatException e) {
+			txtResult.setText("Non ha inserito un numero intero");
+		}
+    	catch (Exception e) {
+			// TODO: handle exception
+		}
     }
     
     @FXML
     void doCalorie(ActionEvent event) {
     	txtResult.clear();
-    	txtResult.appendText("Analisi calorie...");
+    	Food cibo = boxFood.getValue();
+    	txtResult.appendText(String.format("Per il cibo %s i 5 ingredienti piu'calorici sono: \n", cibo.getDisplay_name()));
+    	if (model.best(cibo)==null)
+    	{
+    		txtResult.appendText("Non hai almeno 5 ingredienti per questo cibo");
+    		return;
+    	}
+    	for (Food f: model.best(cibo))
+    	{
+    		txtResult.appendText(f.getDisplay_name()+"\n");
+    	}
     }
 
     @FXML
     void doSimula(ActionEvent event) {
-    	txtResult.clear();
-    	txtResult.appendText("Simulazione...");
+    	try { 
+    		int k= Integer.parseInt(txtK.getText());
+    		txtResult.setText(model.simula(k, boxFood.getValue()));
+			
+		} catch (NumberFormatException e) {
+			txtResult.setText("Non hai inserito un numero");
+		}
+    	catch (Exception e) {
+			txtResult.setText("ERRORE!!!");
+		}
     }
 
     @FXML // This method is called by the FXMLLoader when initialization is complete
@@ -73,6 +125,9 @@ public class FoodController {
         assert btnSimula != null : "fx:id=\"btnSimula\" was not injected: check your FXML file 'Food.fxml'.";
         assert boxFood != null : "fx:id=\"boxFood\" was not injected: check your FXML file 'Food.fxml'.";
         assert txtResult != null : "fx:id=\"txtResult\" was not injected: check your FXML file 'Food.fxml'.";
+        boxFood.setDisable(true);
+        btnCalorie.setDisable(true);
+        btnSimula.setDisable(true);
     }
     
     public void setModel(Model model) {
